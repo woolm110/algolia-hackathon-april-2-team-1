@@ -1,0 +1,232 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Reshape</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                font-family: sans-serif;
+                background-color: #4c5a79;
+                color: white;
+            }
+            .cpanes {
+                display: flex;
+                height: 100vh;
+                gap: 1px;
+            }
+            section {
+                display: flex;
+                flex-direction: column;
+            }
+            section:not(:last-child) {
+                resize: horizontal;
+                overflow: auto;
+                width: 33%;
+            }
+            section:last-child,
+            article:last-child {
+                flex-grow: 1;
+            }
+            h2 {
+                padding: 0 0.5rem;
+                font-size: 1.2rem;
+            }
+            details textarea {
+                resize: vertical;
+            }
+            textarea {
+                width: 100%;
+                border: none;
+                outline: none;
+                flex-grow: 1;
+                background-color: #f9fffa;
+            }
+            article:not(:last-child) {
+                resize: vertical;
+                overflow: auto;
+                height: 50%;
+            }
+            article {
+                display: flex;
+                flex-direction: column;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="cpanes">
+            <section>
+                <article>
+                    <h2 draggable="true">Record</h2>
+                    <details>
+                        <summary>Settings</summary>
+                        <div>
+                            <label
+                                >Image field: <input id="imageField"
+                            /></label>
+                        </div>
+                    </details>
+                    <textarea id="record"></textarea>
+                </article>
+            </section>
+            <section>
+                <article>
+                    <h2 draggable="true">Shape</h2>
+                    <details>
+                        <summary>Generate</summary>
+                        <textarea id="prompt"></textarea>
+                        <button onclick="genShape()">generate shape</button>
+                    </details>
+                    <textarea id="shape"></textarea>
+                </article>
+            </section>
+            <section>
+                <article>
+                    <h2 draggable="true">Output</h2>
+                    <button onclick="run()">reshape</button>
+                    <textarea id="output"></textarea>
+                </article>
+            </section>
+        </div>
+        <script>
+            const $ = (elt) => document.querySelector(elt);
+            const delegate = (el, en, dt, fn) =>
+                $(el).addEventListener(en, (e) => {
+                    const t = e.target.closest(dt);
+                    if (t) fn(t, e);
+                });
+
+            delegate(".cpanes", "dragstart", "article", (t, e) => {
+                t.closest("article").classList.add("drag");
+                e.effectAllowed = "move";
+            });
+
+            delegate(".cpanes", "dragend", "article", (t) => {
+                t.closest("article").classList.remove("drag");
+            });
+
+            delegate(".cpanes", "dragover", "section", (t, e) => {
+                e.preventDefault();
+                e.dropEffect = "move";
+            });
+
+            delegate(".cpanes", "drop", "article, section", (t, e) => {
+                e.preventDefault();
+                if (t.tagName === "ARTICLE") t.after($(".drag"));
+                else t.appendChild($(".drag"));
+            });
+
+            function genShape() {
+                fetch("https://api.openai.com/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: "Bearer",
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-4o-mini",
+                        messages: [
+                            {
+                                role: "user",
+                                content: [
+                                    {
+                                        type: "text",
+                                        text: `Generate a JSON Schema output. Here is an example:
+                        ---
+                        {
+                            "type": "object",
+                            "properties": {
+                              "name": { "type": "string", "description": "the name of the product" },
+                            },
+                            "required": ["name"],
+                            "additionalProperties": false
+                        }
+                        ---
+                        based on this prompt: ${$("#prompt").value}.
+                        IMPORTANT:
+                        - output the JSON and nothing else. No backtick. Just JSON.
+                        - make SURE the required field contains ALL the keys.
+                        - DO NOT add more field than what's asked in the prompt
+                        `,
+                                    },
+                                ],
+                            },
+                        ],
+                    }),
+                })
+                    .then((r) => r.json())
+                    .then(
+                        (r) =>
+                            ($("#shape").value = r.choices[0].message.content),
+                    );
+            }
+
+            async function reshape(record, imageField, shape) {
+                try {
+                    const content = [
+                        {
+                            type: "text",
+                            text:
+                                "Reshape this record\n" +
+                                JSON.stringify(record),
+                        },
+                    ];
+                    imageField &&
+                        content.push({
+                            type: "image_url",
+                            image_url: {
+                                url: record[imageField],
+                            },
+                        });
+                    const r = await fetch(
+                        "https://api.openai.com/v1/chat/completions",
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer `,
+                            },
+                            body: JSON.stringify({
+                                model: "gpt-4o-mini",
+                                messages: [
+                                    {
+                                        role: "user",
+                                        content,
+                                    },
+                                ],
+                                response_format: {
+                                    type: "json_schema",
+                                    json_schema: {
+                                        name: "enrichment",
+                                        strict: true,
+                                        schema: shape,
+                                    },
+                                },
+                            }),
+                        },
+                    );
+                    const json = await r.json();
+                    return JSON.parse(json.choices[0].message.content);
+                } catch (error) {
+                    console.error("Error:", error);
+                }
+            }
+
+            async function run() {
+                console.log($("#record").value);
+                console.log($("#shape").value);
+                $("#output").textContent = JSON.stringify(
+                    await reshape(
+                        JSON.parse($("#record").value),
+                        $("#imageField").value,
+                        JSON.parse($("#shape").value),
+                    ),
+                    null,
+                    2,
+                );
+            }
+        </script>
+    </body>
+</html>
