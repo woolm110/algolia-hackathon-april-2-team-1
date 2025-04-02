@@ -1,5 +1,9 @@
 # Calculating an "eco score" based on a records image and metadata
 
+- App ID: `1O92LXIWZP`
+- Original Index Name: `ecommerce`
+- Enhanced Index Name: `ecommerce_enhanced`
+
 ### Use cases
 
 - Sustainability Tracking: Allows customers to see the environmental impact of products, making it easier for them to choose eco-friendly options.
