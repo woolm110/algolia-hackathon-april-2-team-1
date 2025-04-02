@@ -26,7 +26,7 @@
 
 - Based on this, the following attributes are outputted:
 
-```json
+````json
 "eco_details": {
   "clothingType": "sneakers",
   "material": "multicolored fabric and synthetic materials",
@@ -53,9 +53,9 @@
     "shippingFootprint": "medium",
     "shippingScore": 3
   }
-}
+}```
 
 - Eco Score Calculation: The data from the attributes above is then used to calculate an “eco score” value. This score can influence custom product rankings based on sustainability.
-- Filtering & Personalization: The attributes also allow users to filter products based on eco-related data. When combined with a personalized strategy that takes these factors into account, users can start to see more tailored, eco-friendly products based on their shopping habits.
+- Filtering & Personalization: The attributes also allow users to filter products based on eco-related data. When combined with a personalized strategy that takes these factors into account, users can start to see more tailored, eco-friendly products based on their shopping habits.gs
 - A sample UI pointing to the newly updated index can be found [here](https://6cmr3k.csb.app/gs)
-```
+````
